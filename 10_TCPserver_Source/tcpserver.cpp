@@ -115,7 +115,7 @@ void TCPserver::ProcessingMessage(QDataStream &datastream, ServiceHeader incHead
             break;
 
         }
-        case 0:{
+        case GET_TIME:{
 
             header.idData = GET_TIME;
             header.len = sizeof(QDateTime);
@@ -152,7 +152,6 @@ void TCPserver::ProcessingMessage(QDataStream &datastream, ServiceHeader incHead
 
             }
             else{
-                //Читаем строку.
                 QString str;
                 datastream >> str;
                 freeSpace -= str.toUtf8().size();

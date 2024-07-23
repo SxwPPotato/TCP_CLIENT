@@ -34,21 +34,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     timer = new QTimer(this);
-   /* connect(timer, &QTimer::timeout, [&]{
-
-        QDateTime dateTime;
-        dateTime = QDateTime::currentDateTime();
-
-        QByteArray dataToSend;
-        dataToSend.resize(sizeof(dateTime));
-
-        memcpy(dataToSend.data(), &dateTime, sizeof(dateTime));
-        DisplayTime(dataToSend);
-
-        timer->start(TIMER_DELAY);
-
-    });*/
-
 
 
     connect(client,&TCPclient::sig_connectStatus, this, &MainWindow::DisplayConnectStatus);
@@ -56,6 +41,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(client,&TCPclient::sig_sendFreeSize, this, &MainWindow::DisplayFreeSpace);
     connect(client,&TCPclient::sig_SendReplyForSetData, this, &MainWindow::SetDataReply);
     connect(client,&TCPclient::sig_sendStat, this, &MainWindow::DisplayStat);
+    connect(client,&TCPclient::sig_clear,this, &MainWindow::DisplaySuccess);
 
 
     //connect(client,&TCPclient::sig_Error, this, &MainWindow::DisplayError);
@@ -96,16 +82,24 @@ void MainWindow::SetDataReply(QString replyString)
 
 void MainWindow::DisplayStat(StatServer stat)
 {
-    QString stats = QString::number(stat.clients,stat.incBytes,stat.sendBytes);
-    ui->tb_result->append(stats);
+    QString clients = QString::number(stat.clients);
+    QString incBytes = QString::number(stat.incBytes);
+    QString sendBytes = QString::number(stat.sendBytes);
+    QString sendPck = QString::number(stat.sendPck);
+    QString revPck = QString::number(stat.revPck);
+    QString workTime = QString::number(stat.workTime);
+    ui->tb_result->append("Количество клиентов = "+clients + "\nПринято байт = "  + incBytes + "\nПередано байт = " + sendBytes + "\nПринято пакетов = " + revPck + "\nПередано пакетов = " + sendPck + "\nВремя работы сервера = " + workTime);
 }
 
 void MainWindow::DisplayError(uint16_t error)
 {
     switch (error) {
     case ERR_NO_FREE_SPACE:
+         ui->tb_result->append("NO_FREE_SPACE");
     case ERR_NO_FUNCT:
+        ui->tb_result->append("NO_FUNCT");
     default:
+         ui->tb_result->append("ERROR");
         break;
     }
 }
@@ -117,7 +111,9 @@ void MainWindow::DisplaySuccess(uint16_t typeMess)
 {
     switch (typeMess) {
     case CLEAR_DATA:
+        ui->tb_result->append("CLEAR_DATA");
     default:
+        ui->tb_result->append("MESSAGE_COMPLITE");
         break;
     }
 
@@ -180,52 +176,42 @@ void MainWindow::on_pb_request_clicked()
 {
 
    ServiceHeader header;
+   QString str = ui->le_data->text();
 
    header.id = ID;
    header.status = STATUS_SUCCES;
    header.len = 0;
 
    switch (ui->cb_request->currentIndex()){
-
-       //Получить время
        case 0:
 
-
+       header.idData = GET_TIME;
        client->SendRequest(header);
-
-
-      // dateTime = QDateTime::currentDateTime();
-       //DisplayTime(dateTime);
-
-        //ui->tb_result->append("time");
-       //Получить свободное место
        break;
 
        case 1:
+
+       header.idData = GET_SIZE;
        client->SendRequest(header);
-
-
-
-       ui->tb_result->append("clear");
-       //Получить статистику
        break;
 
        case 2:
 
-
-       ui->tb_result->append("statistic");
-       //Отправить данные
+       header.idData = GET_STAT;
+       client->SendRequest(header);
        break;
 
        case 3:
 
-       //Очистить память на сервере
-       ui->tb_result->append("cleardata");
+       header.idData = SET_DATA;
+       header.len = str.length();
+       client->SendData(header,str);
        break;
 
        case 4:
 
-       ui->tb_result->append("freedata");
+       header.idData = CLEAR_DATA;
+       client->SendRequest(header);
        break;
 
 
@@ -238,12 +224,8 @@ void MainWindow::on_pb_request_clicked()
 
 }
 
-/*!
- * \brief Обработчик изменения индекса запроса
- */
 void MainWindow::on_cb_request_currentIndexChanged(int index)
 {
-    //Разблокируем поле отправления данных только когда выбрано "Отправить данные"
     if(ui->cb_request->currentIndex() == 3){
         ui->le_data->setEnabled(true);
     }

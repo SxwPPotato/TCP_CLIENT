@@ -148,29 +148,49 @@ void TCPclient::ReadyReed()
 void TCPclient::ProcessingData(ServiceHeader header, QDataStream &stream)
 {
 
-    int q = header.idData;
-
+    uint32_t count;
     QDateTime times;
-    stream>>times;
+    StatServer st_serv;
+    QString str;
+    uint16_t message;
+
 
     switch (header.idData){
 
         case GET_TIME:
+        stream>>times;
         emit sig_sendTime(times);
+        break;
 
         case GET_SIZE:
+        stream>>count;
 
-        //emit sig_sendFreeSize();
+        emit sig_sendFreeSize(count);
+        break;
 
         case GET_STAT:
+        stream>>st_serv.clients;
+        stream>>st_serv.incBytes;
+        stream>>st_serv.sendBytes;
+        stream>>st_serv.sendPck;
+        stream>>st_serv.revPck;
+        stream>>st_serv.workTime;
 
-        //emit sig_sendStat();
+        emit sig_sendStat(st_serv);
+        break;
 
         case SET_DATA:
+        stream>>str;
 
-        //emit sig_SendReplyForSetData();
+        emit sig_SendReplyForSetData(str);
+        break;
 
         case CLEAR_DATA:
+        stream>>message;
+
+        emit sig_clear(message);
+        break;
+
         default:
             return;
 
